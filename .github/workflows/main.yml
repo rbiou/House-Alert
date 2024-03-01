@@ -25,4 +25,6 @@ jobs:
       - name: execute py script # run main.py
         env:
           DB_URI: ${{ secrets.DB_URI }}
+          TELEGRAM_KEY: ${{ secrets.TELEGRAM_KEY }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
         run: python main.py
