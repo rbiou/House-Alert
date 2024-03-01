@@ -10,6 +10,7 @@ import config
 from utils import log
 from notify import send_notification
 from constants import NOTIFICATION_CONTENT
+from db_connexion import get_connexion
 
 from datetime import datetime, timezone, timedelta
 
