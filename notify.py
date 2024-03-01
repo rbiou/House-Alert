@@ -4,14 +4,19 @@ Notify.py
 Holds the notification logic, using the Telegram API
 """
 
+import os
+import time
 from telegram import *
 from telegram import InputMediaPhoto
 from telegram.ext import *
 from telegram.error import RetryAfter, TimedOut
 from utils import log
-from config import TELEGRAM_KEY, CHAT_ID
+if os.path.isfile("local.py"):
+    from local import TELEGRAM_KEY, CHAT_ID
+else:
+    TELEGRAM_KEY = os.environ['TELEGRAM_KEY']
+    CHAT_ID = os.environ['CHAT_ID']
 from pprint import pprint
-import time
 
 log("Connecting to the Telegram API", "Telegram")
 bot = Bot(TELEGRAM_KEY)

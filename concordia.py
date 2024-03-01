@@ -6,7 +6,6 @@ from requests import get
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 from pandas import pandas as pd
-import config
 from utils import log
 from notify import send_notification
 from constants import NOTIFICATION_CONTENT
