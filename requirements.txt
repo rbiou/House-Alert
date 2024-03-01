@@ -6,3 +6,4 @@ pandas
 urllib3==1.25.11
 typing
 datetime
+psycopg2-binary
