@@ -1,4 +1,5 @@
 import json
+import urllib.parse
 from time import sleep
 from traceback import print_exc
 from random import randint, random
@@ -49,7 +50,7 @@ def notify_concordia_results():
                         provider = PROVIDER,
                         price = price,
                         address = address,
-                        addressLink = address.replace(' ', '+'),
+                        addressLink = urllib.parse.quote(address, safe='/', encoding=None, errors=None),
                         size = size,
                         url = url
                     )
