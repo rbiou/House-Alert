@@ -1,7 +1,7 @@
 import os
 import psycopg2
 
-from utils import log
+from utils.utils import log
 
 if os.path.isfile("local.py"):
     from local import DB_URI

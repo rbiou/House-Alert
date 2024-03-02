@@ -10,7 +10,7 @@ from telegram import *
 from telegram import InputMediaPhoto
 from telegram.ext import *
 from telegram.error import RetryAfter, TimedOut
-from utils import log
+from utils.utils import log
 if os.path.isfile("local.py"):
     from local import TELEGRAM_KEY, CHAT_ID
 else:

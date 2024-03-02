@@ -6,10 +6,10 @@ from requests import get
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 from pandas import pandas as pd
-from utils import log
-from notify import send_notification
-from constants import NOTIFICATION_CONTENT
-from db_connexion import get_connexion
+from utils.utils import log
+from utils.notify import send_notification
+from utils.constants import NOTIFICATION_CONTENT
+from utils.db_connexion import get_connexion
 
 from datetime import datetime, timezone, timedelta
 
