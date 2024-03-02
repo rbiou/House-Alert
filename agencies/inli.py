@@ -54,6 +54,7 @@ def notify_inli_results():
                     provider = PROVIDER,
                     price = price,
                     address = address,
+                    addressLink = address.replace(' ', '+'),
                     size = size,
                     url = url
                 )

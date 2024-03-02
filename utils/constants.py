@@ -1,6 +1,6 @@
 NOTIFICATION_CONTENT = '''\
 🆕 Agence : {provider}
-🏡 [{address}](https://maps.google.com/maps?q={address})
+🏡 [{address}](https://maps.google.com/maps?q={addressLink})
 📐 Taille : {size}
 💴 Prix : {price}
 🔗 [Voir l'annonce...👆]({url})

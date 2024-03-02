@@ -55,6 +55,7 @@ def notify_ca_results():
                     provider = PROVIDER,
                     price = price,
                     address = address,
+                    addressLink = address.replace(' ', '+'),
                     size = size,
                     url = url
                 )
