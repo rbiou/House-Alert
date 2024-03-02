@@ -1,4 +1,6 @@
 import json
+import time
+import re
 from time import sleep
 from traceback import print_exc
 from random import randint, random
@@ -15,16 +17,16 @@ from datetime import datetime, timezone, timedelta
 
 from pprint import pprint
 
-PROVIDER='CDC Habitat'
-URL='https://www.cdc-habitat.fr/Recherche/show/cdTypage=Location&order=nb_loyer_total&pagerGo=&newSearch=true&lbLieu=Paris%3B&nbLoyerMin=&nbLoyerMax=&nbSurfaceMin=&nbSurfaceMax=&'
-def notify_cdc_results():
+PROVIDER='Inli'
+URL='https://www.inli.fr/locations/offres/paris-departement_d:75/?price_min=0&price_max=900&area_min=20&area_max=200&room_min=0&room_max=5&bedroom_min=0&bedroom_max=5&lat=&lng=&zoom=&radius='
+def notify_inli_results():
     try:
         log('Start scrap agency...', PROVIDER)
-	    #Read datas from Concordia
+	    #Read datas from provider
         req = Request(url=URL, headers={'User-Agent': 'Mozilla/5.0'})
         response = urlopen(req).read()
         soup = BeautifulSoup(response.decode('utf-8'), 'lxml') # lxml is faster but a dependency, "html.parser" is quite fast and installed by default
-        allHouse = soup.find_all('article', { 'class': 'residenceCard' })
+        allHouse = soup.find_all('li', { 'class': 'liste-bien-item' })
         log('{0} house(s) found'.format(len(allHouse)), PROVIDER)
         #Get db_connexion
         db = get_connexion()
@@ -33,14 +35,18 @@ def notify_cdc_results():
         for house in allHouse:
             url = house.find('a').get('href').strip()
             id = url.rsplit('/', 1)[-1]
+            url = 'https://www.inli.fr' + url
             log('Check if {0} deal already notified'.format(id), PROVIDER)
             db_cursor.execute('SELECT COUNT(*) FROM public.alert WHERE unique_id = %(id)s AND provider = %(provider)s', {'id': id, 'provider': PROVIDER})
             count = db_cursor.fetchone()[0]
             if count == 0:
-                price = house.find('div', {'class': 'price'}).text.strip()
-                size = house.find('h3', {'class': 'h4'}).text.rsplit('–', 1)[-1].strip()
-                address = house.find('div', {'class': 'location small'}).text.strip()
-                imagesDiv = house.find_all('img')
+                price = house.find('p', {'class': 'liste-bien-item-price'}).text.strip()
+                size = house.find('p', {'class': 'liste-bien-item-description'}).text.replace('"', '').rsplit('de ', 1)[-1].strip()
+                size = re.findall('\d+', size)[0] + 'm2'
+                houseDetailsContent = urlopen(Request(url=url, headers={'User-Agent': 'Mozilla/5.0'})).read()
+                houseDetails = BeautifulSoup(houseDetailsContent.decode('utf-8'), 'lxml')
+                address = houseDetails.find('li', {'class': 'propos__attributs__section__list__item propos__attributs__section__list__item__address'}).text.strip()
+                imagesDiv = houseDetails.find_all('img', {'class': 'thumbnail__image'})
                 images = [img.get('src').strip() for img in imagesDiv]
                 item = "{provider} - {address} - {size} - {price}".format(provider=PROVIDER, address=address, size=size, price=price)
                 log("New house : {item} => {url}".format(item=item, url=url), domain=PROVIDER)

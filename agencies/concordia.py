@@ -25,6 +25,7 @@ def notify_concordia_results():
         response = urlopen(req).read()
         soup = BeautifulSoup(response.decode('utf-8'), 'lxml') # lxml is faster but a dependency, "html.parser" is quite fast and installed by default
         allHouse = soup.find_all('div', { 'class': 'col-md-6 listing_wrapper' })
+        log('{0} house(s) found'.format(len(allHouse)), PROVIDER)
         #Get db_connexion
         db = get_connexion()
         db_cursor = db.cursor()
@@ -42,9 +43,10 @@ def notify_concordia_results():
                     address = house.find('h4').text.strip()
                     url = house.get('data-modal-link')
                     images = [house.find('img').get('src').strip()]
-                    item = "{address} - {size} - {price}".format(address=address, size=size, price=price)
-                    log("New house : {item} => {url}".format(item=item, url=url), domain="Concordia")
+                    item = "{provider} - {address} - {size} - {price}".format(provider=PROVIDER, address=address, size=size, price=price)
+                    log("New house : {item} => {url}".format(item=item, url=url), domain=PROVIDER)
                     content = NOTIFICATION_CONTENT.format(
+                        provider = PROVIDER,
                         price = price,
                         address = address,
                         size = size,

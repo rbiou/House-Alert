@@ -1,5 +1,6 @@
 NOTIFICATION_CONTENT = '''\
-🆕 {address}
+🆕 {provider}
+🏡 {address}
 📐 Taille : {size}
 💴 Prix : {price}
 🔗 {url}
