@@ -28,8 +28,8 @@ def send_notification(content, images):
         if len(images) > 0:
             # Send the 3 firsts images
             images_to_send = []
-            for image in images[:3]:
-                image_obj = InputMediaPhoto(media = image, caption = content if image == images[0] else '')
+            for index, image in enumerate(images[:3]):
+                image_obj = InputMediaPhoto(media = image, caption = content if index == 0 else '', parse_mode = 'Markdown')
                 images_to_send.append(image_obj)
             bot.send_media_group(chat_id = CHAT_ID, media = images_to_send)
         else:

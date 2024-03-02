@@ -1,7 +1,7 @@
 NOTIFICATION_CONTENT = '''\
-🆕 {provider}
-🏡 {address}
+🆕 Agence : {provider}
+🏡 [{address}](https://maps.google.com/maps?q={address})
 📐 Taille : {size}
 💴 Prix : {price}
-🔗 {url}
+🔗 [Voir l'annonce...👆]({url})
 '''
