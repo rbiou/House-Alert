@@ -10,44 +10,42 @@ from utils.db_connexion import get_connexion
 from utils.notify import send_notification
 from utils.utils import log
 
-PROVIDER = 'Inli'
-URL = ('https://www.inli.fr/locations/offres/paris-departement_d:75/?price_min=0&price_max=900&area_min=20&area_max'
-       '=200&room_min=0&room_max=5&bedroom_min=0&bedroom_max=5&lat=&lng=&zoom=&radius=')
+PROVIDER = 'GTF'
+URL = ('https://www.gtf.fr/fr/liste-des-biens-loueur?field_ad_type[eq][]=renting&field_price[eq]['
+       ']=price_129&limit=10&offset=0&offset_additional=0&currentIndex=2&currentMode=list')
 
 
-def notify_inli_results():
+def notify_gtf_results():
     try:
         log('Start scrap agency...', PROVIDER)
-        # Read datas from provider
+        # Read data's from provider
         req = Request(url=URL, headers={'User-Agent': 'Mozilla/5.0'})
         response = urlopen(req).read()
         soup = BeautifulSoup(response.decode('utf-8'),
                              'lxml')
-        all_house = soup.find_all('li', {'class': 'liste-bien-item', 'data-id': True})
+        all_house = soup.find_all('div', {'class': 'property property__search-item'})
         log('{0} house(s) found'.format(len(all_house)), PROVIDER)
         # Get db_connexion
         db = get_connexion()
         db_cursor = db.cursor()
         # For each alert requested, check event and deals
         for house in all_house:
-            url = house.find('a').get('href').strip()
-            item_id = url.rsplit('/', 1)[-1]
-            url = 'https://www.inli.fr' + url
+            url = house.find('a', {'class': 'link__property full-link'}).get('href').strip()
+            item_id = url.rsplit('-', 1)[-1]
+            url = 'https://www.gtf.fr' + url
             log('Check if {0} deal already notified'.format(item_id), PROVIDER)
             db_cursor.execute('SELECT COUNT(*) FROM public.alert WHERE unique_id = %(id)s AND provider = %(provider)s',
                               {'id': item_id, 'provider': PROVIDER})
             count = db_cursor.fetchone()[0]
             if count == 0:
-                price = house.find('p', {'class': 'liste-bien-item-price'}).text.strip()
-                size = house.find('p', {'class': 'liste-bien-item-description'}).text.replace('"', '').rsplit('de ', 1)[
-                    -1].strip()
+                size = house.find('div', {'class': 'property-surface property-data--center'}).text.strip()
                 size = re.findall('\d+', size)[0] + 'm2'
                 house_details_content = urlopen(Request(url=url, headers={'User-Agent': 'Mozilla/5.0'})).read()
                 house_details = BeautifulSoup(house_details_content.decode('utf-8'), 'lxml')
-                address = house_details.find('li', {
-                    'class': 'propos__attributs__section__list__item propos__attributs__section__list__item__address'}).text.strip()
-                images_div = house_details.find_all('img', {'class': 'thumbnail__image'})
-                images = [img.get('src').strip() for img in images_div]
+                price = house_details.find('span', {'class': 'price'}).text.strip()
+                address = 'Paris'
+                images_div = house.find_all('source', {'type': 'image/webp'})
+                images = ['https://www.gtf.fr' + img.get('srcset').strip() for img in images_div]
                 item = "{provider} - {address} - {size} - {price}".format(provider=PROVIDER, address=address, size=size,
                                                                           price=price)
                 log("New house : {item} => {url}".format(item=item, url=url), domain=PROVIDER)
