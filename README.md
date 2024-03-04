@@ -1,9 +1,12 @@
 TODO
-- GTF
-  - Fix pictures
-  - Manage address
-  - Manage only Paris houses : add filter
-- Concordia
-  - Manage multi pictures
-- ALL
   - Add phone number to call in each agency
+  - Do only one connection to DB for all agencies
+  - Specific cases by agency :
+    - In'li
+      - Manage 502 Bad Gateway  
+    - GTF
+      - Fix pictures
+      - Manage address
+      - Manage only Paris houses : add filter
+    - Concordia
+      - Manage multi pictures
