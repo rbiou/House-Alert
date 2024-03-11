@@ -10,6 +10,8 @@ Overall, our application is a convenient and effective way to stay up-to-date wi
 
 <p align="center">
   <img src="https://i.ibb.co/zhjQFPc/Capture-d-e-cran-2024-03-11-a-19-33-25.png" alt="Screenshot from HouseAlert telegram bot for a rent in Paris" style="width:20vw;height:auto;">
+  <br>
+  <em>Screenshot from HouseAlert telegram bot for a rent in Paris</em>
 </p>
 
 ## Managed real estate agencies
