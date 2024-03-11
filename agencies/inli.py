@@ -46,7 +46,7 @@ def notify_inli_results():
                 house_details = BeautifulSoup(house_details_content.decode('utf-8'), 'lxml')
                 address = house_details.find('li', {
                     'class': 'propos__attributs__section__list__item propos__attributs__section__list__item__address'}).text.strip()
-                images_div = house_details.find_all('img', {'class': 'thumbnail__image'})
+                images_div = house_details.find('div', {'class': 'thumbnail-container page-bien__thumbnails'}).find_all('img', {'class': 'thumbnail__image'})
                 images = [img.get('src').strip() for img in images_div]
                 item = "{provider} - {address} - {size} - {price}".format(provider=PROVIDER, address=address, size=size,
                                                                           price=price)
