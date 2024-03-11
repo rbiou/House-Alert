@@ -1,4 +1,4 @@
-# HouseAlert
+# 🏠 HouseAlert
 
 ## What is HouseAlert ?
 
@@ -55,7 +55,7 @@ Overall, our application is a convenient and effective way to stay up-to-date wi
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-This project is licensed under the **Apache 2.0** License **-** see the [LICENSE]**(**LICENSE**)** file for details.
+This project is licensed under the **Apache 2.0** License **-** see the [LICENSE](LICENSE) file for details.
 
 ## Contact
 
