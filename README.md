@@ -8,5 +8,3 @@
       - Fix pictures
       - Manage address
       - Manage only Paris houses : add filter
-    - **Concordia**
-      - Manage multi pictures
