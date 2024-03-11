@@ -52,4 +52,4 @@ Overall, our application is a convenient and effective way to stay up-to-date wi
 
 ## Contact
 
-If you have any questions or feedback, please contact me on [LinkedIn](/https://www.linkedin.com/in/remibiou/).
+If you have any questions or feedback, please contact me on [LinkedIn](https://www.linkedin.com/in/remibiou/).
