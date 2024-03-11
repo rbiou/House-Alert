@@ -1,3 +1,4 @@
+import re
 import urllib.parse
 from traceback import print_exc
 from urllib.request import Request, urlopen
@@ -40,7 +41,15 @@ def notify_concordia_results():
                     size = house.find('span', {'class': 'infosize'}).find('span').text.strip()
                     address = house.find('h4').text.strip()
                     url = house.get('data-modal-link')
-                    images = [house.find('img').get('src').strip()]
+                    house_details_content = urlopen(Request(url=url, headers={'User-Agent': 'Mozilla/5.0'})).read()
+                    house_details = BeautifulSoup(house_details_content.decode('utf-8'), 'lxml')
+                    images_div = house_details.find('div', {'class': 'gallery_wrapper'}).find_all('div', class_='image_gallery')
+                    images = []
+                    for div in images_div:
+                        style = div.get('style')
+                        url = style.split('(')[1].split(')')[0]
+                        url = re.sub(r'-\d+x\d+\.', '.', url)
+                        images.append(url)
                     item = "{provider} - {address} - {size} - {price}".format(provider=PROVIDER, address=address,
                                                                               size=size, price=price)
                     log("New house : {item} => {url}".format(item=item, url=url), domain=PROVIDER)
