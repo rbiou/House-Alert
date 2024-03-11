@@ -8,6 +8,8 @@ The use of a Telegram bot for alerts ensures that users receive notifications in
 
 Overall, our application is a convenient and effective way to stay up-to-date with the latest rental listings on real estate agency websites. It saves users time and effort by automating the search process and delivering relevant results directly to their Telegram inbox.
 
+![Screenshot from HouseAlert telegram bot for a rent in Paris]([http://url/to/img.png](https://i.ibb.co/zhjQFPc/Capture-d-e-cran-2024-03-11-a-19-33-25.png))
+
 ## Managed real estate agencies
 
 * [In'li](https://www.inli.fr/)
