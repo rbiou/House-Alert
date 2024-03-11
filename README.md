@@ -4,7 +4,6 @@
   - _Specific cases by agency :_
     - **In'li**
       - Manage 502 Bad Gateway
-      - Bug : if only 1 pic, bot get pictures from other houses
     - **GTF**
       - Fix pictures
       - Manage address
