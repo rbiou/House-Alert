@@ -55,7 +55,8 @@ Overall, our application is a convenient and effective way to stay up-to-date wi
     - Fix pictures
     - Manage address
     - Manage only Paris houses : add filter
-
+  - **Concordia**
+    - Fix URL that points to an image link instead of the real estate ad
 
 ## License
 
