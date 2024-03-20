@@ -22,6 +22,7 @@ Overall, our application is a convenient and effective way to stay up-to-date wi
 * [CDC Habitat](https://www.cdc-habitat.fr/)
 * [Concordia](https://agenceconcordia.com/nos-appartements-a-la-location/)
 * [GTF](https://www.gtf.fr/liste-des-biens-loueur)
+* [Brews](https://www.brews.fr/)
 
 ## Features
 
