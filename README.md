@@ -23,6 +23,7 @@ Overall, our application is a convenient and effective way to stay up-to-date wi
 * [Concordia](https://agenceconcordia.com/nos-appartements-a-la-location/)
 * [GTF](https://www.gtf.fr/liste-des-biens-loueur)
 * [Brews](https://www.brews.fr/)
+* [Agence Dupleix](https://dupleix.com)
 
 ## Features
 
