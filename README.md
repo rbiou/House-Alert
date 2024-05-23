@@ -29,7 +29,7 @@ Overall, our application is a convenient and effective way to stay up-to-date wi
 
 * Customizable search criteria, including location, price range, number of bedrooms, and other amenities
 * Periodic scraping (default : each 10 minutes) of real estate agency websites to check for new listings
-* Real-time alerts via Telegram bot when new listings are found
+* Real-time alerts via Telegram bot when new listings are found 
 * **(Coming...)** Easy-to-use interface for managing search criteria and alerts
 
 ## Requirements
