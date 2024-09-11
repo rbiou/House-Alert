@@ -44,8 +44,8 @@ def notify_gtf_results():
                 house_details = BeautifulSoup(house_details_content.decode('utf-8'), 'lxml')
                 price = house_details.find('span', {'class': 'price'}).text.strip()
                 address = 'Paris'
-                images_div = house.find_all('source', {'type': 'image/webp'})
-                images = ['https://www.gtf.fr' + img.get('srcset').strip() for img in images_div]
+                images_div = house.find_all('img')
+                images = ['https://www.gtf.fr' + img.get('src').strip() for img in images_div]
                 item = "{provider} - {address} - {size} - {price}".format(provider=PROVIDER, address=address, size=size,
                                                                           price=price)
                 log("New house : {item} => {url}".format(item=item, url=url), domain=PROVIDER)
