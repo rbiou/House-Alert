@@ -41,7 +41,7 @@ def notify_cattalanjohnson_results():
                 house_details_content = urlopen(Request(url=url, headers={'User-Agent': 'Mozilla/5.0'})).read()
                 house_details = BeautifulSoup(house_details_content.decode('utf-8'), 'lxml')
                 price = house.find('p', {'class': 'prix'}).text.strip()
-                price = re.findall('\d+', price)[0] + '€'
+                price = ''.join(re.findall('\d+', price)) + '€'
                 size = house_details.find('div', {'id': 'content_divSurface', 'class': 'col-md-3'}).text.strip()
                 size = re.findall('\d+', size)[0] + 'm2'
                 postal_code = re.search(r'map_(\d+)\.png',
