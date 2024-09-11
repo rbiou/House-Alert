@@ -11,8 +11,7 @@ from utils.notify import send_notification
 from utils.utils import log
 
 PROVIDER = 'GTF'
-URL = ('https://www.gtf.fr/fr/liste-des-biens-loueur?field_ad_type[eq][]=renting&field_price[eq]['
-       ']=price_129&limit=10&offset=0&offset_additional=0&currentIndex=2&currentMode=list')
+URL = 'https://www.gtf.fr/fr/liste-des-biens-loueur?field_ad_type[eq][]=renting&field_price[eq]['']=price_129&limit=10&offset=0&offset_additional=0&currentIndex=2&currentMode=list'
 
 
 def notify_gtf_results():
@@ -33,6 +32,10 @@ def notify_gtf_results():
             url = house.find('a', {'class': 'link__property full-link'}).get('href').strip()
             item_id = url.rsplit('-', 1)[-1]
             url = 'https://www.gtf.fr' + url
+            city = re.sub(r'\s+', '', house.find('div', {'class': 'property__summary'}).find('div').text.split('-')[0]).upper()
+            # If not Paris, break
+            if re.sub(r'\s+', '', city).upper() != "PARIS":
+                break
             log('Check if {0} deal already notified'.format(item_id), PROVIDER)
             db_cursor.execute('SELECT COUNT(*) FROM public.alert WHERE unique_id = %(id)s AND provider = %(provider)s',
                               {'id': item_id, 'provider': PROVIDER})
