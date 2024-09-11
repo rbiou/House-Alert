@@ -55,8 +55,6 @@ Overall, our application is a convenient and effective way to stay up-to-date wi
     - Manage 502 Bad Gateway
   - **GTF**
     - Manage address
-  - **Concordia**
-    - Fix URL that points to an image link instead of the real estate ad
 
 ## License
 

@@ -47,9 +47,9 @@ def notify_concordia_results():
                     images = []
                     for div in images_div:
                         style = div.get('style')
-                        url = style.split('(')[1].split(')')[0]
-                        url = re.sub(r'-\d+x\d+\.', '.', url)
-                        images.append(url)
+                        img_url = style.split('(')[1].split(')')[0]
+                        img_url = re.sub(r'-\d+x\d+\.', '.', img_url)
+                        images.append(img_url)
                     item = "{provider} - {address} - {size} - {price}".format(provider=PROVIDER, address=address,
                                                                               size=size, price=price)
                     log("New house : {item} => {url}".format(item=item, url=url), domain=PROVIDER)
