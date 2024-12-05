@@ -1,9 +1,9 @@
-python_telegram_bot==13.7
-requests==2.24.0
+python_telegram_bot
+requests
 beautifulsoup4==4.9.3
 lxml
 pandas
-urllib3==1.25.11
+urllib3
 typing
 datetime
 psycopg2-binary

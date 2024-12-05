@@ -12,7 +12,6 @@ from agencies.dupleix import notify_dupleix_results
 from agencies.gtf import notify_gtf_results
 from agencies.inli import notify_inli_results
 
-
 def get_houses_and_notify():
     notify_gtf_results()
     notify_cattalanjohnson_results()
@@ -22,6 +21,5 @@ def get_houses_and_notify():
     notify_ca_results()
     notify_brews_results()
     notify_dupleix_results()
-
 
 get_houses_and_notify()

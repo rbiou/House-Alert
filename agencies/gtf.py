@@ -8,10 +8,10 @@ from bs4 import BeautifulSoup
 from utils.constants import NOTIFICATION_CONTENT
 from utils.db_connexion import get_connexion
 from utils.notify import send_notification
-from utils.utils import log
+from utils.utils import log, check_price_in_range
 
 PROVIDER = 'GTF'
-URL = 'https://www.gtf.fr/fr/liste-des-biens-loueur?field_ad_type[eq][]=renting&field_price[eq]['']=price_129&limit=10&offset=0&offset_additional=0&currentIndex=2&currentMode=list'
+URL = 'https://www.gtf.fr/fr/liste-des-biens-loueur'
 
 
 def notify_gtf_results():
@@ -35,14 +35,14 @@ def notify_gtf_results():
             city = re.sub(r'\s+', '', house.find('div', {'class': 'property__summary'}).find('div').text.split('-')[0]).upper()
             # If not Paris, break
             if re.sub(r'\s+', '', city).upper() != "PARIS":
-                break
+                continue
             log('Check if {0} deal already notified'.format(item_id), PROVIDER)
             db_cursor.execute('SELECT COUNT(*) FROM public.alert WHERE unique_id = %(id)s AND provider = %(provider)s',
                               {'id': item_id, 'provider': PROVIDER})
             count = db_cursor.fetchone()[0]
             if count == 0:
                 size = house.find('div', {'class': 'property-surface property-data--center'}).text.strip()
-                size = re.findall('\d+', size)[0] + 'm2'
+                size = re.findall(r'\d+', size)[0] + 'm2'
                 house_details_content = urlopen(Request(url=url, headers={'User-Agent': 'Mozilla/5.0'})).read()
                 house_details = BeautifulSoup(house_details_content.decode('utf-8'), 'lxml')
                 price = house_details.find('span', {'class': 'price'}).text.strip()
@@ -51,21 +51,24 @@ def notify_gtf_results():
                 images = ['https://www.gtf.fr' + img.get('src').strip() for img in images_div]
                 item = "{provider} - {address} - {size} - {price}".format(provider=PROVIDER, address=address, size=size,
                                                                           price=price)
-                log("New house : {item} => {url}".format(item=item, url=url), domain=PROVIDER)
-                content = NOTIFICATION_CONTENT.format(
-                    provider=PROVIDER,
-                    price=price,
-                    address=address,
-                    addressLink=urllib.parse.quote(address, safe='/', encoding=None, errors=None),
-                    size=size,
-                    url=url
-                )
-                # Send notification
-                send_notification(content, images)
-                # Add alert to DB
-                db_cursor.execute('INSERT INTO public.alert (unique_id, provider) VALUES (%(id)s, %(provider)s)',
-                                  {'id': item_id, 'provider': PROVIDER})
-                db.commit()
+                if (check_price_in_range(price, size)):
+                    log("New house : {item} => {url}".format(item=item, url=url), domain=PROVIDER)
+                    content = NOTIFICATION_CONTENT.format(
+                        provider=PROVIDER,
+                        price=price,
+                        address=address,
+                        addressLink=urllib.parse.quote(address, safe='/', encoding=None, errors=None),
+                        size=size,
+                        url=url
+                    )
+                    # Send notification
+                    send_notification(content, images)
+                    # Add alert to DB
+                    db_cursor.execute('INSERT INTO public.alert (unique_id, provider) VALUES (%(id)s, %(provider)s)',
+                                      {'id': item_id, 'provider': PROVIDER})
+                    db.commit()
+                else:
+                    log("Not in price/size range. Size: {size}; Price: {price}".format(price=price, size=size))
             else:
                 log('Alreay notified', PROVIDER)
         log('Close db...', PROVIDER)

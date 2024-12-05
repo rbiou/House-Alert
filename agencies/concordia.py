@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from utils.constants import NOTIFICATION_CONTENT
 from utils.db_connexion import get_connexion
 from utils.notify import send_notification
-from utils.utils import log
+from utils.utils import log, check_price_in_range
 
 PROVIDER = 'CONCORDIA'
 URL = 'https://agenceconcordia.com/nos-appartements-a-la-location/'
@@ -52,21 +52,24 @@ def notify_concordia_results():
                         images.append(img_url)
                     item = "{provider} - {address} - {size} - {price}".format(provider=PROVIDER, address=address,
                                                                               size=size, price=price)
-                    log("New house : {item} => {url}".format(item=item, url=url), domain=PROVIDER)
-                    content = NOTIFICATION_CONTENT.format(
-                        provider=PROVIDER,
-                        price=price,
-                        address=address,
-                        addressLink=urllib.parse.quote(address, safe='/', encoding=None, errors=None),
-                        size=size,
-                        url=url
-                    )
-                    # Send notification
-                    send_notification(content, images)
-                    # Add alert to DB
-                    db_cursor.execute('INSERT INTO public.alert (unique_id, provider) VALUES (%(id)s, %(provider)s)',
-                                      {'id': item_id, 'provider': PROVIDER})
-                    db.commit()
+                    if (check_price_in_range(price, size)):
+                        log("New house : {item} => {url}".format(item=item, url=url), domain=PROVIDER)
+                        content = NOTIFICATION_CONTENT.format(
+                            provider=PROVIDER,
+                            price=price,
+                            address=address,
+                            addressLink=urllib.parse.quote(address, safe='/', encoding=None, errors=None),
+                            size=size,
+                            url=url
+                        )
+                        # Send notification
+                        send_notification(content, images)
+                        # Add alert to DB
+                        db_cursor.execute('INSERT INTO public.alert (unique_id, provider) VALUES (%(id)s, %(provider)s)',
+                                          {'id': item_id, 'provider': PROVIDER})
+                        db.commit()
+                    else:
+                        log("Not in price/size range. Size: {size}; Price: {price}".format(price=price, size=size))
                 else:
                     log('Alreay notified', PROVIDER)
         log('Close db...', PROVIDER)

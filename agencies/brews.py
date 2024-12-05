@@ -8,16 +8,17 @@ from bs4 import BeautifulSoup
 from utils.constants import NOTIFICATION_CONTENT
 from utils.db_connexion import get_connexion
 from utils.notify import send_notification
-from utils.utils import log
+from utils.utils import log, check_price_in_range
 
 PROVIDER = 'Brews'
-URL = ('https://www.brews.fr/recherche?a=2&b%5B%5D=appt&b%5B%5D=house&c=Paris%2C+&radius=0&d=0&e=1000&f=20&x=illimit%C3%A9&do_search=Rechercher')
+URL = ('https://www.brews.fr/recherche?a=2&b%5B%5D=appt&b%5B%5D=house&c=Paris%2C+&radius=0&d=0&x=illimit%C3%A9&do_search=Rechercher')
 prefix_URL = 'https://www.brews.fr'
 
 def notify_brews_results():
     try:
         log('Start scrap agency...', PROVIDER)
         # Read data's from provider
+
         req = Request(url=URL, headers={'User-Agent': 'Mozilla/5.0'})
         response = urlopen(req).read()
         soup = BeautifulSoup(response.decode('utf-8'),
@@ -48,21 +49,24 @@ def notify_brews_results():
                 images = [(re.sub(r"_s\.([^.]+)$", "_l.\\1", img.get('src').strip())) for img in images_div]
                 item = "{provider} - {address} - {size} - {price}".format(provider=PROVIDER, address=address, size=size,
                                                                           price=price)
-                log("New house : {item} => {url}".format(item=item, url=url), domain=PROVIDER)
-                content = NOTIFICATION_CONTENT.format(
-                    provider=PROVIDER,
-                    price=price,
-                    address=address,
-                    addressLink=urllib.parse.quote(address, safe='/', encoding=None, errors=None),
-                    size=size,
-                    url=url
-                )
-                # Send notification
-                send_notification(content, images)
-                # Add alert to DB
-                db_cursor.execute('INSERT INTO public.alert (unique_id, provider) VALUES (%(id)s, %(provider)s)',
-                                  {'id': item_id, 'provider': PROVIDER})
-                db.commit()
+                if (check_price_in_range(price, size)):
+                    log("New house : {item} => {url}".format(item=item, url=url), domain=PROVIDER)
+                    content = NOTIFICATION_CONTENT.format(
+                        provider=PROVIDER,
+                        price=price,
+                        address=address,
+                        addressLink=urllib.parse.quote(address, safe='/', encoding=None, errors=None),
+                        size=size,
+                        url=url
+                    )
+                    # Send notification
+                    send_notification(content, images)
+                    # Add alert to DB
+                    db_cursor.execute('INSERT INTO public.alert (unique_id, provider) VALUES (%(id)s, %(provider)s)',
+                                      {'id': item_id, 'provider': PROVIDER})
+                    db.commit()
+                else:
+                    log("Not in price/size range. Size: {size}; Price: {price}".format(price=price, size=size))
             else:
                 log('Alreay notified', PROVIDER)
         log('Close db...', PROVIDER)
