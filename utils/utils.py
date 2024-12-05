@@ -2,11 +2,11 @@ from time import time
 import re
 
 TARGET_HOUSES = [
-    {"price": 800, "sizeMin": 25},
-    {"price": 1100, "sizeMin": 30},
-    {"price": 1200, "sizeMin": 35},
-    {"price": 1300, "sizeMin": 40},
-    {"price": 1500, "sizeMin": 50}]
+    {"price": 800.0, "sizeMin": 25.0},
+    {"price": 1100.0, "sizeMin": 30.0},
+    {"price": 1200.0, "sizeMin": 35.0},
+    {"price": 1300.0, "sizeMin": 40.0},
+    {"price": 1500.0, "sizeMin": 50.0}]
 
 def log(message: str = "Log", domain: str = "app"):
     print("\033[90m{timestamp}\033[0m｜[House-Alert] [{domain}] {message}".format(
@@ -29,10 +29,9 @@ def check_price_in_range(price, size):
     price = float(re.sub(r'[^\d.]', '', price.replace(" ", "").replace(",", "."))) if isinstance(price, str) else price
     size = float(re.sub(r'm.*$', '', size).replace(" ", "").replace(",", ".")) if isinstance(size, str) else size
 
-    result = False
+    # Iterate over the target houses and check the conditions
     for house in TARGET_HOUSES:
-        if float(house["sizeMin"]) <= float(size):
-            if float(price) <= float(house["price"]):
-                result = True
-                break
-    return result  # Return False if the size does not fit into any range.
+        if size >= house["sizeMin"] and price <= house["price"]:
+            return True  # Return True if a matching house is found
+
+    return False  # Return False if no house meets the criteria
