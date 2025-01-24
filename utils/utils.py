@@ -2,7 +2,7 @@ from time import time
 import re
 
 TARGET_HOUSES = [
-    {"price": 800.0, "sizeMin": 25.0},
+    {"price": 900.0, "sizeMin": 25.0},
     {"price": 1100.0, "sizeMin": 30.0},
     {"price": 1200.0, "sizeMin": 35.0},
     {"price": 1300.0, "sizeMin": 40.0},
