@@ -6,7 +6,6 @@ Holds the notification logic, using the Telegram API
 
 import os
 import time
-import asyncio
 
 from telegram import *
 from telegram import InputMediaPhoto
@@ -24,7 +23,7 @@ log("Connecting to the Telegram API", "Telegram")
 bot = Bot(TELEGRAM_KEY)
 
 
-def send_notification(content, images):
+async def send_notification(content, images):
     # Sends a telegram notification
     log("Notifying user about a new product", "Telegram")
     try:
@@ -34,13 +33,13 @@ def send_notification(content, images):
             for index, image in enumerate(images[:3]):
                 image_obj = InputMediaPhoto(media=image, caption=content if index == 0 else '', parse_mode='Markdown')
                 images_to_send.append(image_obj)
-            asyncio.run(bot.send_media_group(chat_id=CHAT_ID, media=images_to_send))
+            await bot.send_media_group(chat_id=CHAT_ID, media=images_to_send)
         else:
-            asyncio.run(bot.send_message(chat_id=CHAT_ID, text=content))
+            await bot.send_message(chat_id=CHAT_ID, text=content)
     except RetryAfter:
         print("ALERT FLOOD : wait 30s")
         time.sleep(30)
-        send_notification(content, images)
+        await send_notification(content, images)
     except TimedOut:
         print("TIME OUT : try again")
-        send_notification(content, images)
+        await send_notification(content, images)

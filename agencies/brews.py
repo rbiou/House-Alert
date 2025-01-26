@@ -14,7 +14,7 @@ PROVIDER = 'Brews'
 URL = ('https://www.brews.fr/recherche?a=2&b%5B%5D=appt&b%5B%5D=house&c=Paris%2C+&radius=0&d=0&x=illimit%C3%A9&do_search=Rechercher')
 prefix_URL = 'https://www.brews.fr'
 
-def notify_brews_results():
+async def notify_brews_results():
     try:
         log('Start scrap agency...', PROVIDER)
         # Read data's from provider
@@ -43,7 +43,7 @@ def notify_brews_results():
                 house_details = BeautifulSoup(house_details_content.decode('utf-8'), 'lxml')
                 price = house_details.find('td', {'itemprop': 'price'})['content'].strip() + '€'
                 size = house_details.find('td', text='Surface').find_next_sibling('td').text.strip()
-                size = re.findall('\d+', size)[0] + 'm2'
+                size = re.findall(r'\d+', size)[0] + 'm2'
                 address = house_details.find('td', text='Ville').find_next_sibling('td').text.strip()
                 images_div = house_details.find(class_='prod_slideshow_container').find_all('img')
                 images = [(re.sub(r"_s\.([^.]+)$", "_l.\\1", img.get('src').strip())) for img in images_div]
@@ -60,7 +60,7 @@ def notify_brews_results():
                         url=url
                     )
                     # Send notification
-                    send_notification(content, images)
+                    await send_notification(content, images)
                     # Add alert to DB
                     db_cursor.execute('INSERT INTO public.alert (unique_id, provider) VALUES (%(id)s, %(provider)s)',
                                       {'id': item_id, 'provider': PROVIDER})

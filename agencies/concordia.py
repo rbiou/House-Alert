@@ -14,7 +14,7 @@ PROVIDER = 'CONCORDIA'
 URL = 'https://agenceconcordia.com/nos-appartements-a-la-location/'
 
 
-def notify_concordia_results():
+async def notify_concordia_results():
     try:
         log('Start scrap agency...', PROVIDER)
         # Read datas from Concordia
@@ -37,7 +37,7 @@ def notify_concordia_results():
                     {'id': item_id, 'provider': PROVIDER})
                 count = db_cursor.fetchone()[0]
                 if count == 0:
-                    price = house.find('div', {'class': 'listing_unit_price_wrapper'}).text.strip()
+                    price = house.find('div', {'class': 'listing_unit_price_wrapper'}).text.strip().replace('.', '')
                     size = house.find('span', {'class': 'infosize'}).find('span').text.strip()
                     address = house.find('h4').text.strip()
                     url = house.get('data-modal-link')
@@ -63,7 +63,7 @@ def notify_concordia_results():
                             url=url
                         )
                         # Send notification
-                        send_notification(content, images)
+                        await send_notification(content, images)
                         # Add alert to DB
                         db_cursor.execute('INSERT INTO public.alert (unique_id, provider) VALUES (%(id)s, %(provider)s)',
                                           {'id': item_id, 'provider': PROVIDER})

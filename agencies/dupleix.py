@@ -17,42 +17,52 @@ URL = ('https://www.dupleix.com/index.php?action=searchresults&sortby=prix&sortt
 prefix_URL = 'https://www.dupleix.com/'
 
 
-def notify_dupleix_results():
+async def notify_dupleix_results():
     try:
         log('Start scrap agency...', PROVIDER)
         # Read data's from provider
         req = Request(url=URL, headers={'User-Agent': 'Mozilla/5.0'})
         response = urlopen(req).read()
-        soup = BeautifulSoup(response.decode('latin-1'),
-                             'lxml')
+        soup = BeautifulSoup(response.decode('latin-1'), 'lxml')
         all_house = soup.find_all('div', {'class': 'single-featured-property mb-50'})
-        log('{0} house(s) found'.format(len(all_house)), PROVIDER)
+        log(f'{len(all_house)} house(s) found', PROVIDER)
+
         # Get db_connexion
         db = get_connexion()
         db_cursor = db.cursor()
+
         # For each alert requested, check event and deals
         for house in all_house:
             url = house.find('a', {'class': 'btn south-btn'}).get('href').strip()
             item_id = url.rsplit('/')[-1].rsplit('_')[-1].rsplit('.')[0]
             url = prefix_URL + url
+
             size = house.find('div', class_='space').find('span').text.strip()
             size = re.findall(r'\d+', size)[0] + 'm2'
-            log('Check if {0} deal already notified'.format(item_id), PROVIDER)
-            db_cursor.execute('SELECT COUNT(*) FROM public.alert WHERE unique_id = %(id)s AND provider = %(provider)s',
-                              {'id': item_id, 'provider': PROVIDER})
+            log(f'Check if {item_id} deal already notified', PROVIDER)
+
+            db_cursor.execute(
+                'SELECT COUNT(*) FROM public.alert WHERE unique_id = %(id)s AND provider = %(provider)s',
+                {'id': item_id, 'provider': PROVIDER}
+            )
             count = db_cursor.fetchone()[0]
+
             if count == 0:
                 house_details_content = urlopen(Request(url=url, headers={'User-Agent': 'Mozilla/5.0'})).read()
                 house_details = BeautifulSoup(house_details_content.decode('latin-1'), 'lxml')
+
                 price = house_details.find('div', {'class': 'list-price'}).text.strip()
                 price = re.findall(r'\d+', price)[0] + '€'
                 address = house_details.find('h1').text.split('-')[-1].strip() + ' Paris'
+
                 images_div = house_details.find_all('a', {'data-fancybox': 'gallery'})
                 images = [(prefix_URL + img.get('href').strip()) for img in images_div]
-                item = "{provider} - {address} - {size} - {price}".format(provider=PROVIDER, address=address, size=size,
-                                                                          price=price)
-                if (check_price_in_range(price, size)):
-                    log("New house : {item} => {url}".format(item=item, url=url), domain=PROVIDER)
+
+                item = f"{PROVIDER} - {address} - {size} - {price}"
+
+                if check_price_in_range(price, size):
+                    log(f"New house: {item} => {url}", domain=PROVIDER)
+
                     content = NOTIFICATION_CONTENT.format(
                         provider=PROVIDER,
                         price=price,
@@ -61,19 +71,25 @@ def notify_dupleix_results():
                         size=size,
                         url=url
                     )
+
                     # Send notification
-                    send_notification(content, images)
+                    await send_notification(content, images)
+
                     # Add alert to DB
-                    db_cursor.execute('INSERT INTO public.alert (unique_id, provider) VALUES (%(id)s, %(provider)s)',
-                                      {'id': item_id, 'provider': PROVIDER})
+                    db_cursor.execute(
+                        'INSERT INTO public.alert (unique_id, provider) VALUES (%(id)s, %(provider)s)',
+                        {'id': item_id, 'provider': PROVIDER}
+                    )
                     db.commit()
                 else:
-                    log("Not in price/size range. Size: {size}; Price: {price}".format(price=price, size=size))
+                    log(f"Not in price/size range. Size: {size}; Price: {price}")
             else:
-                log('Alreay notified', PROVIDER)
+                log('Already notified', PROVIDER)
+
         log('Close db...', PROVIDER)
         db_cursor.close()
         db.close()
+
     except Exception:
-        log('Exception catched', PROVIDER)
+        log('Exception caught', PROVIDER)
         print_exc()

@@ -14,7 +14,7 @@ URL = ('https://www.cdc-habitat.fr/Recherche/show/cdTypage=Location&order=nb_loy
        '=Paris%3B&nbLoyerMin=&nbLoyerMax=&nbSurfaceMin=&nbSurfaceMax=&')
 
 
-def notify_cdc_results():
+async def notify_cdc_results():
     try:
         log('Start scrap agency...', PROVIDER)
         # Read data's from Concordia
@@ -54,7 +54,7 @@ def notify_cdc_results():
                         url=url
                     )
                     # Send notification
-                    send_notification(content, images)
+                    await send_notification(content, images)
                     # Add alert to DB
                     db_cursor.execute('INSERT INTO public.alert (unique_id, provider) VALUES (%(id)s, %(provider)s)',
                                       {'id': item_id, 'provider': PROVIDER})

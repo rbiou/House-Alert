@@ -14,45 +14,63 @@ PROVIDER = 'GTF'
 URL = 'https://www.gtf.fr/fr/liste-des-biens-loueur'
 
 
-def notify_gtf_results():
+async def notify_gtf_results():
     try:
         log('Start scrap agency...', PROVIDER)
-        # Read data's from provider
+
+        # Read data from provider
         req = Request(url=URL, headers={'User-Agent': 'Mozilla/5.0'})
         response = urlopen(req).read()
-        soup = BeautifulSoup(response.decode('utf-8'),
-                             'lxml')
+        soup = BeautifulSoup(response.decode('utf-8'), 'lxml')
+
+        # Find all properties listed
         all_house = soup.find_all('div', {'class': 'property property__search-item'})
-        log('{0} house(s) found'.format(len(all_house)), PROVIDER)
+        log(f'{len(all_house)} house(s) found', PROVIDER)
+
         # Get db_connexion
         db = get_connexion()
         db_cursor = db.cursor()
-        # For each alert requested, check event and deals
+
+        # For each house found, check if it's a new alert
         for house in all_house:
             url = house.find('a', {'class': 'link__property full-link'}).get('href').strip()
             item_id = url.rsplit('-', 1)[-1]
             url = 'https://www.gtf.fr' + url
+
+            # Extract city and check if it's Paris
             city = re.sub(r'\s+', '', house.find('div', {'class': 'property__summary'}).find('div').text.split('-')[0]).upper()
-            # If not Paris, break
-            if re.sub(r'\s+', '', city).upper() != "PARIS":
-                continue
-            log('Check if {0} deal already notified'.format(item_id), PROVIDER)
+            if city != "PARIS":
+                continue  # Skip if not Paris
+
+            log(f'Check if {item_id} deal already notified', PROVIDER)
+
+            # Check if this property was already notified in the database
             db_cursor.execute('SELECT COUNT(*) FROM public.alert WHERE unique_id = %(id)s AND provider = %(provider)s',
                               {'id': item_id, 'provider': PROVIDER})
             count = db_cursor.fetchone()[0]
+
             if count == 0:
+                # Extract additional details about the property
                 size = house.find('div', {'class': 'property-surface property-data--center'}).text.strip()
                 size = re.findall(r'\d+', size)[0] + 'm2'
+
+                # Fetch details page for price and other info
                 house_details_content = urlopen(Request(url=url, headers={'User-Agent': 'Mozilla/5.0'})).read()
                 house_details = BeautifulSoup(house_details_content.decode('utf-8'), 'lxml')
+
                 price = house_details.find('span', {'class': 'price'}).text.strip()
-                address = 'Paris'
+                address = 'Paris'  # Assuming it's always in Paris
                 images_div = house.find_all('img')
                 images = ['https://www.gtf.fr' + img.get('src').strip() for img in images_div]
-                item = "{provider} - {address} - {size} - {price}".format(provider=PROVIDER, address=address, size=size,
-                                                                          price=price)
-                if (check_price_in_range(price, size)):
-                    log("New house : {item} => {url}".format(item=item, url=url), domain=PROVIDER)
+
+                # Create a string with the important property details
+                item = f"{PROVIDER} - {address} - {size} - {price}"
+
+                # Check if the price and size meet the criteria
+                if check_price_in_range(price, size):
+                    log(f"New house : {item} => {url}", domain=PROVIDER)
+
+                    # Prepare content for notification
                     content = NOTIFICATION_CONTENT.format(
                         provider=PROVIDER,
                         price=price,
@@ -61,19 +79,23 @@ def notify_gtf_results():
                         size=size,
                         url=url
                     )
+
                     # Send notification
-                    send_notification(content, images)
-                    # Add alert to DB
+                    await send_notification(content, images)
+
+                    # Add the property to the alerts table in DB
                     db_cursor.execute('INSERT INTO public.alert (unique_id, provider) VALUES (%(id)s, %(provider)s)',
                                       {'id': item_id, 'provider': PROVIDER})
                     db.commit()
                 else:
-                    log("Not in price/size range. Size: {size}; Price: {price}".format(price=price, size=size))
+                    log(f"Not in price/size range. Size: {size}; Price: {price}")
             else:
-                log('Alreay notified', PROVIDER)
+                log('Already notified', PROVIDER)
+
         log('Close db...', PROVIDER)
         db_cursor.close()
         db.close()
+
     except Exception:
-        log('Exception catched', PROVIDER)
+        log('Exception caught', PROVIDER)
         print_exc()

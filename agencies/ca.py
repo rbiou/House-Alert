@@ -15,7 +15,7 @@ URL = ('https://www.ca-immobilier.fr/louer/recherche?minarea=25&maxprice=1500&so
        '%3A75056&sections=location&types=appartment&zones=&distance=0&displayMode=mosaic')
 
 
-def notify_ca_results():
+async def notify_ca_results():
     try:
         log('Start scrap agency...', PROVIDER)
         # Read data's from provider
@@ -61,7 +61,7 @@ def notify_ca_results():
                         url=url
                     )
                     # Send notification
-                    send_notification(content, images)
+                    await send_notification(content, images)
                     # Add alert to DB
                     db_cursor.execute('INSERT INTO public.alert (unique_id, provider) VALUES (%(id)s, %(provider)s)',
                                       {'id': item_id, 'provider': PROVIDER})
