@@ -77,7 +77,7 @@ async def notify_dupleix_results():
 
                     # Add alert to DB
                     db_cursor.execute(
-                        'INSERT INTO public.alert (unique_id, provider) VALUES (%(id)s, %(provider)s)',
+                        'INSERT INTO public.alert (unique_id, provider, creation_date) VALUES (%(id)s, %(provider)s, CURRENT_TIMESTAMP)',
                         {'id': item_id, 'provider': PROVIDER}
                     )
                     db.commit()

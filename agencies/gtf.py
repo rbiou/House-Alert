@@ -84,7 +84,7 @@ async def notify_gtf_results():
                     await send_notification(content, images)
 
                     # Add the property to the alerts table in DB
-                    db_cursor.execute('INSERT INTO public.alert (unique_id, provider) VALUES (%(id)s, %(provider)s)',
+                    db_cursor.execute('INSERT INTO public.alert (unique_id, provider, creation_date) VALUES (%(id)s, %(provider)s, CURRENT_TIMESTAMP)',
                                       {'id': item_id, 'provider': PROVIDER})
                     db.commit()
                 else:
