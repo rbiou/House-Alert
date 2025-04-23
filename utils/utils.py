@@ -18,7 +18,7 @@ def log(message: str = "Log", domain: str = "app"):
 def check_price_in_range(price, size):
     """
     Check if the input price is less than or equal to the max price
-    for the size range that the input size falls into.
+    for the size range that the input size falls into. 
 
     :param price: The price to check.
     :param size: The size to check.
