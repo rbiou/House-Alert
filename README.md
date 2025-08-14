@@ -7,7 +7,7 @@ Our application is a Python-based web scraper that **monitors rental listings on
 The use of a Telegram bot for alerts ensures that users receive notifications in real time, even when they are not actively using the application.
 
 Overall, our application is a convenient and effective way to stay up-to-date with the latest rental listings on real estate agency websites. It saves users time and effort by automating the search process and delivering relevant results directly to their Telegram inbox.
-
+ 
 <p align="center">
   <img src="https://i.ibb.co/zhjQFPc/Capture-d-e-cran-2024-03-11-a-19-33-25.png" alt="Screenshot from HouseAlert telegram bot for a rent in Paris" style="width:20vw;height:auto;">
   <br>
