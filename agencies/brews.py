@@ -6,7 +6,6 @@ from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 
 from utils.constants import NOTIFICATION_CONTENT
-from utils.db_connexion import get_connexion
 from utils.notify import send_notification
 from utils.utils import log, check_price_in_range
 
@@ -14,7 +13,7 @@ PROVIDER = 'Brews'
 URL = ('https://www.brews.fr/recherche?a=2&b%5B%5D=appt&b%5B%5D=house&c=Paris%2C+&radius=0&d=0&x=illimit%C3%A9&do_search=Rechercher')
 prefix_URL = 'https://www.brews.fr'
 
-async def notify_brews_results():
+async def notify_brews_results(conn):
     try:
         log('Start scrap agency...', PROVIDER)
         # Read data's from provider
@@ -26,9 +25,7 @@ async def notify_brews_results():
         all_house = soup.find_all('div', {'class': 'res_div1'})
         all_house = [house for house in all_house if not house.find('div', attrs={'class': 'bandeau_small bandeau_text', 'data-rel': 'loue'})]
         log('{0} house(s) found'.format(len(all_house)), PROVIDER)
-        # Get db_connexion
-        db = get_connexion()
-        db_cursor = db.cursor()
+        db_cursor = conn.cursor()
         # For each alert requested, check event and deals
         for house in all_house:
             url = house.find('a', {'class': 'prod_details btn small'}).get('href').strip()
@@ -64,14 +61,13 @@ async def notify_brews_results():
                     # Add alert to DB
                     db_cursor.execute('INSERT INTO public.alert (unique_id, provider, creation_date) VALUES (%(id)s, %(provider)s, CURRENT_TIMESTAMP)',
                                       {'id': item_id, 'provider': PROVIDER})
-                    db.commit()
+                    conn.commit()
                 else:
                     log("Not in price/size range. Size: {size}; Price: {price}".format(price=price, size=size))
             else:
                 log('Alreay notified', PROVIDER)
         log('Close db...', PROVIDER)
         db_cursor.close()
-        db.close()
     except Exception:
         log('Exception catched', PROVIDER)
         print_exc()

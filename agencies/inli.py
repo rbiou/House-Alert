@@ -8,7 +8,6 @@ import requests
 from bs4 import BeautifulSoup
 
 from utils.constants import NOTIFICATION_CONTENT
-from utils.db_connexion import get_connexion
 from utils.notify import send_notification
 from utils.utils import log, check_price_in_range
 
@@ -17,7 +16,7 @@ URL = ('https://www.inli.fr/locations/offres/paris-departement_d:75/?price_min=0
        '=200&room_min=0&room_max=5&bedroom_min=0&bedroom_max=5&lat=&lng=&zoom=&radius=')
 
 
-async def notify_inli_results():
+async def notify_inli_results(conn):
     try:
         log('Start scrap agency...', PROVIDER)
 
@@ -30,9 +29,7 @@ async def notify_inli_results():
         all_house = featured_parent.find_all('div', {'class': 'featured-item'}) if featured_parent else []
         log(f'{len(all_house)} house(s) found', PROVIDER)
 
-        # Get database connection
-        db = get_connexion()
-        db_cursor = db.cursor()
+        db_cursor = conn.cursor()
 
         # For each property, check if it has been notified
         for house in all_house:
@@ -74,7 +71,7 @@ async def notify_inli_results():
                     # Add alert to DB
                     db_cursor.execute('INSERT INTO public.alert (unique_id, provider, creation_date) VALUES (%(id)s, %(provider)s, CURRENT_TIMESTAMP)',
                                       {'id': item_id, 'provider': PROVIDER})
-                    db.commit()
+                    conn.commit()
                 else:
                     log(f"Not in price/size range. Size: {size}; Price: {price}")
             else:
@@ -82,7 +79,6 @@ async def notify_inli_results():
 
         log('Close db...', PROVIDER)
         db_cursor.close()
-        db.close()
 
     except Exception:
         log('Exception caught', PROVIDER)

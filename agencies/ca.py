@@ -6,7 +6,6 @@ from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 
 from utils.constants import NOTIFICATION_CONTENT
-from utils.db_connexion import get_connexion
 from utils.notify import send_notification
 from utils.utils import log, check_price_in_range
 
@@ -15,7 +14,7 @@ URL = ('https://www.ca-immobilier.fr/louer/recherche?minarea=25&maxprice=1500&so
        '%3A75056&sections=location&types=appartment&zones=&distance=0&displayMode=mosaic')
 
 
-async def notify_ca_results():
+async def notify_ca_results(conn):
     try:
         log('Start scrap agency...', PROVIDER)
         # Read data's from provider
@@ -26,9 +25,7 @@ async def notify_ca_results():
         all_house = soup.find_all('article', {'class': 'sub_card-entities'})
         all_house = [d for d in all_house if d.find('div', {'class': 'sub_card-entities--infos'})]
         log('{0} house(s) found'.format(len(all_house)), PROVIDER)
-        # Get db_connexion
-        db = get_connexion()
-        db_cursor = db.cursor()
+        db_cursor = conn.cursor()
         # For each alert requested, check event and deals
         for house in all_house:
             url = house.find('a', {'data-tc-category': 'Bouton biens'}).get('href').strip()
@@ -66,14 +63,13 @@ async def notify_ca_results():
                     # Add alert to DB
                     db_cursor.execute('INSERT INTO public.alert (unique_id, provider, creation_date) VALUES (%(id)s, %(provider)s, CURRENT_TIMESTAMP)',
                                       {'id': item_id, 'provider': PROVIDER})
-                    db.commit()
+                    conn.commit()
                 else:
                     log("Not in price/size range. Size: {size}; Price: {price}".format(price=price, size=size))
             else:
                 log('Alreay notified', PROVIDER)
         log('Close db...', PROVIDER)
         db_cursor.close()
-        db.close()
     except Exception:
         log('Exception catched', PROVIDER)
         print_exc()

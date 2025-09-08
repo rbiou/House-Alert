@@ -6,7 +6,6 @@ from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 
 from utils.constants import NOTIFICATION_CONTENT
-from utils.db_connexion import get_connexion
 from utils.notify import send_notification
 from utils.utils import log, check_price_in_range
 
@@ -17,7 +16,7 @@ URL = ('https://www.dupleix.com/index.php?action=searchresults&sortby=prix&sortt
 prefix_URL = 'https://www.dupleix.com/'
 
 
-async def notify_dupleix_results():
+async def notify_dupleix_results(conn):
     try:
         log('Start scrap agency...', PROVIDER)
         # Read data's from provider
@@ -28,8 +27,7 @@ async def notify_dupleix_results():
         log(f'{len(all_house)} house(s) found', PROVIDER)
 
         # Get db_connexion
-        db = get_connexion()
-        db_cursor = db.cursor()
+        db_cursor = conn.cursor()
 
         # For each alert requested, check event and deals
         for house in all_house:
@@ -80,7 +78,7 @@ async def notify_dupleix_results():
                         'INSERT INTO public.alert (unique_id, provider, creation_date) VALUES (%(id)s, %(provider)s, CURRENT_TIMESTAMP)',
                         {'id': item_id, 'provider': PROVIDER}
                     )
-                    db.commit()
+                    conn.commit()
                 else:
                     log(f"Not in price/size range. Size: {size}; Price: {price}")
             else:
@@ -88,7 +86,6 @@ async def notify_dupleix_results():
 
         log('Close db...', PROVIDER)
         db_cursor.close()
-        db.close()
 
     except Exception:
         log('Exception caught', PROVIDER)

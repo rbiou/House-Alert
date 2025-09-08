@@ -6,7 +6,6 @@ from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 
 from utils.constants import NOTIFICATION_CONTENT
-from utils.db_connexion import get_connexion
 from utils.notify import send_notification
 from utils.utils import log, check_price_in_range
 
@@ -15,7 +14,7 @@ URL = ('https://www.cdc-habitat.fr/Recherche/show/cdTypage=Location&order=nb_loy
        '=Paris%3B&nbLoyerMin=&nbLoyerMax=&nbSurfaceMin=&nbSurfaceMax=&')
 
 
-async def notify_cdc_results():
+async def notify_cdc_results(conn):
     try:
         log('Start scrap agency...', PROVIDER)
         # Read data's from Concordia
@@ -25,9 +24,7 @@ async def notify_cdc_results():
                              'lxml')
         all_house = soup.find_all('article', {'class': 'residenceCard'})
         log('{0} house(s) found'.format(len(all_house)), PROVIDER)
-        # Get db_connexion
-        db = get_connexion()
-        db_cursor = db.cursor()
+        db_cursor = conn.cursor()
         # For each alert requested, check event and deals
         for house in all_house:
             url = house.find('a').get('href').strip()
@@ -59,14 +56,13 @@ async def notify_cdc_results():
                     # Add alert to DB
                     db_cursor.execute('INSERT INTO public.alert (unique_id, provider, creation_date) VALUES (%(id)s, %(provider)s, CURRENT_TIMESTAMP)',
                                       {'id': item_id, 'provider': PROVIDER})
-                    db.commit()
+                    conn.commit()
                 else:
                     log("Not in price/size range. Size: {size}; Price: {price}".format(price=price, size=size))
             else:
                 log('Alreay notified', PROVIDER)
         log('Close db...', PROVIDER)
         db_cursor.close()
-        db.close()
     except Exception:
         log('Exception catched', PROVIDER)
         print_exc()
