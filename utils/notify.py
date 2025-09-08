@@ -7,17 +7,24 @@ Holds the notification logic, using the Telegram API
 import os
 import time
 
+from dotenv import load_dotenv
+
 from telegram import *
 from telegram import InputMediaPhoto
 from telegram.error import RetryAfter, TimedOut
 
 from utils.utils import log
 
-if os.path.isfile("local.py"):
-    from local import TELEGRAM_KEY, CHAT_ID
-else:
-    TELEGRAM_KEY = os.environ['TELEGRAM_KEY']
-    CHAT_ID = os.environ['CHAT_ID']
+
+# Charger le fichier .env si présent
+load_dotenv()
+
+# Récupération des variables d'environnement
+TELEGRAM_KEY = os.getenv("TELEGRAM_KEY")
+CHAT_ID = os.getenv("CHAT_ID")
+
+if not TELEGRAM_KEY or not CHAT_ID:
+    raise ValueError("TELEGRAM_KEY or CHAT_ID not set. Please check your .env or environment variables.")
 
 log("Connecting to the Telegram API", "Telegram")
 bot = Bot(TELEGRAM_KEY)
