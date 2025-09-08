@@ -39,9 +39,10 @@ async def notify_ca_results():
                               {'id': item_id, 'provider': PROVIDER})
             count = db_cursor.fetchone()[0]
             if count == 0:
-                price = house.find('div', {'class': 'infos-price'}).find('strong').text.strip()
                 house_details_content = urlopen(Request(url=url, headers={'User-Agent': 'Mozilla/5.0'})).read()
                 house_details = BeautifulSoup(house_details_content.decode('utf-8'), 'lxml')
+                price = int(re.sub(r'\D', '', house_details.find('strong', {'class': 'mention-charge-comprise'}).get_text(strip=True) or '0'))
+                price = f"{price}€"
                 size = house_details.find('h4', {'class': 'picto_surface'}).find('span').text.strip()
                 size = re.findall(r'\d+', size)[0] + 'm2'
                 address = house_details.find('h3', {'class': 'prog_title'}).text.strip() + ', ' + house_details.find('h3', {'class': 'prog_city'}).text.strip()

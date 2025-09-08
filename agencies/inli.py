@@ -1,8 +1,10 @@
+from io import BytesIO
 import re
 import urllib.parse
 from traceback import print_exc
 from urllib.request import Request, urlopen
 
+import requests
 from bs4 import BeautifulSoup
 
 from utils.constants import NOTIFICATION_CONTENT
@@ -24,7 +26,8 @@ async def notify_inli_results():
         response = urlopen(req).read()
         soup = BeautifulSoup(response.decode('utf-8'), 'lxml')
 
-        all_house = soup.find_all('li', {'class': 'liste-bien-item', 'data-id': True})
+        featured_parent = soup.find('div', {'class': 'featured-items white-background'})
+        all_house = featured_parent.find_all('div', {'class': 'featured-item'}) if featured_parent else []
         log(f'{len(all_house)} house(s) found', PROVIDER)
 
         # Get database connection
@@ -43,17 +46,15 @@ async def notify_inli_results():
             count = db_cursor.fetchone()[0]
 
             if count == 0:
-                price = house.find('p', {'class': 'liste-bien-item-price'}).text.strip()
-                size = house.find('p', {'class': 'liste-bien-item-description'}).text.replace('"', '').rsplit('de ', 1)[-1].strip()
-                size = re.findall(r'\d+', size)[0] + 'm2'
-
+                price = ((house.find('div', {'class': 'featured-price'}) or {}).find('span', {'class': 'demi-condensed'}).get_text(strip=True) or '0 €')
+                size = (re.search(r'(\d+(?:[.,]\d+)?)\s*m²', (house.find('div', {'class': 'featured-details'}) or {}).find('span').get_text(strip=True) or '0').group(1).replace(',', '.')) + ' m²'
                 house_details_content = urlopen(Request(url=url, headers={'User-Agent': 'Mozilla/5.0'})).read()
                 house_details = BeautifulSoup(house_details_content.decode('utf-8'), 'lxml')
-                address = house_details.find('li', {'class': 'propos__attributs__section__list__item propos__attributs__section__list__item__address'}).text.strip()
+                address = 'Paris'
 
-                images_div = house_details.find('div', {'class': 'thumbnail-container page-bien__thumbnails'}).find_all('img', {'class': 'thumbnail__image'})
-                images = [img.get('src').strip() for img in images_div]
-
+                images_div = house_details.find('div', {'class': 'advert-page-images'})
+                images = [BytesIO(r.content) for img_tag in (images_div or []).find_all('img')[:3] 
+                  for r in [requests.get(img_tag.get('src').strip())] if r.ok]
                 item = f"{PROVIDER} - {address} - {size} - {price}"
 
                 # Check if the price and size match the criteria

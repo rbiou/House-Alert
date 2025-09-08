@@ -1,3 +1,4 @@
+import re
 import urllib.parse
 from traceback import print_exc
 from urllib.request import Request, urlopen
@@ -37,7 +38,7 @@ async def notify_cdc_results():
             count = db_cursor.fetchone()[0]
             if count == 0:
                 price = house.find('div', {'class': 'price'}).text.strip()
-                size = house.find('h3', {'class': 'h4'}).text.rsplit('–', 1)[-1].strip()
+                size = int(re.search(r'(\d+)\s*m²', house.find('h3', {'class': 'h4'}).get_text(strip=True)) .group(1)) if re.search(r'(\d+)\s*m²', house.find('h3', {'class': 'h4'}).get_text(strip=True)) else 0
                 address = house.find('div', {'class': 'location small'}).text.strip()
                 images_div = house.find_all('img')
                 images = [img.get('src').strip() for img in images_div]
