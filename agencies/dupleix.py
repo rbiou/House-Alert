@@ -1,8 +1,15 @@
+"""
+dupleix.py
+
+Scraper for Agence Dupleix real estate agency.
+"""
+
 import re
 import urllib.parse
 from traceback import print_exc
 from urllib.request import Request, urlopen
 
+import psycopg2.extensions
 from bs4 import BeautifulSoup
 
 from utils.constants import NOTIFICATION_CONTENT
@@ -10,38 +17,40 @@ from utils.notify import send_notification
 from utils.utils import log, check_price_in_range
 
 PROVIDER = 'Agence Dupleix'
-URL = ('https://www.dupleix.com/index.php?action=searchresults&sortby=prix&sorttype=ASC&ref=&type=Location&bien'
-       '=Appartements&Villes=PARIS&prix-min=&prix-max=1500&Nbre_pieces-min=&Nbre_pieces-max=&Nbre_ch-min=&Nbre_ch-max'
-       '=&Surface_h-min=25&Surface_h-max=&surface_t-min=&surface_t-max=')
-prefix_URL = 'https://www.dupleix.com/'
+URL = (
+    'https://www.dupleix.com/index.php?action=searchresults&sortby=prix&sorttype=ASC&ref='
+    '&type=Location&bien=Appartements&Villes=PARIS&prix-min=&prix-max=1500&Nbre_pieces-min='
+    '&Nbre_pieces-max=&Nbre_ch-min=&Nbre_ch-max=&Surface_h-min=25&Surface_h-max='
+    '&surface_t-min=&surface_t-max='
+)
+PREFIX_URL = 'https://www.dupleix.com/'
 
 
-async def notify_dupleix_results(conn):
+async def notify_dupleix_results(conn: psycopg2.extensions.connection) -> None:
     try:
-        log('Start scrap agency...', PROVIDER)
-        # Read data's from provider
+        log('Start scraping agency...', PROVIDER)
+
         req = Request(url=URL, headers={'User-Agent': 'Mozilla/5.0'})
         response = urlopen(req).read()
         soup = BeautifulSoup(response.decode('latin-1'), 'lxml')
-        all_house = soup.find_all('div', {'class': 'single-featured-property mb-50'})
-        log(f'{len(all_house)} house(s) found', PROVIDER)
 
-        # Get db_connexion
+        all_houses = soup.find_all('div', {'class': 'single-featured-property mb-50'})
+        log(f'{len(all_houses)} house(s) found', PROVIDER)
+
         db_cursor = conn.cursor()
 
-        # For each alert requested, check event and deals
-        for house in all_house:
+        for house in all_houses:
             url = house.find('a', {'class': 'btn south-btn'}).get('href').strip()
             item_id = url.rsplit('/')[-1].rsplit('_')[-1].rsplit('.')[0]
-            url = prefix_URL + url
+            url = PREFIX_URL + url
 
             size = house.find('div', class_='space').find('span').text.strip()
             size = re.findall(r'\d+', size)[0] + 'm2'
-            log(f'Check if {item_id} deal already notified', PROVIDER)
 
+            log(f'Check if {item_id} deal already notified', PROVIDER)
             db_cursor.execute(
                 'SELECT COUNT(*) FROM public.alert WHERE unique_id = %(id)s AND provider = %(provider)s',
-                {'id': item_id, 'provider': PROVIDER}
+                {'id': item_id, 'provider': PROVIDER},
             )
             count = db_cursor.fetchone()[0]
 
@@ -52,31 +61,23 @@ async def notify_dupleix_results(conn):
                 price = house_details.find('div', {'class': 'list-price'}).text.strip()
                 price = re.findall(r'\d+', price)[0] + '€'
                 address = house_details.find('h1').text.split('-')[-1].strip() + ' Paris'
-
                 images_div = house_details.find_all('a', {'data-fancybox': 'gallery'})
-                images = [(prefix_URL + img.get('href').strip()) for img in images_div]
-
-                item = f"{PROVIDER} - {address} - {size} - {price}"
+                images = [(PREFIX_URL + img.get('href').strip()) for img in images_div]
 
                 if check_price_in_range(price, size):
-                    log(f"New house: {item} => {url}", domain=PROVIDER)
-
+                    log(f"New listing: {PROVIDER} - {address} - {size} - {price} => {url}", domain=PROVIDER)
                     content = NOTIFICATION_CONTENT.format(
                         provider=PROVIDER,
                         price=price,
                         address=address,
-                        addressLink=urllib.parse.quote(address, safe='/', encoding=None, errors=None),
+                        addressLink=urllib.parse.quote(address, safe='/'),
                         size=size,
-                        url=url
+                        url=url,
                     )
-
-                    # Send notification
                     await send_notification(content, images)
-
-                    # Add alert to DB
                     db_cursor.execute(
                         'INSERT INTO public.alert (unique_id, provider, creation_date) VALUES (%(id)s, %(provider)s, CURRENT_TIMESTAMP)',
-                        {'id': item_id, 'provider': PROVIDER}
+                        {'id': item_id, 'provider': PROVIDER},
                     )
                     conn.commit()
                 else:
@@ -84,7 +85,7 @@ async def notify_dupleix_results(conn):
             else:
                 log('Already notified', PROVIDER)
 
-        log('Close db...', PROVIDER)
+        log('Closing db cursor...', PROVIDER)
         db_cursor.close()
 
     except Exception:

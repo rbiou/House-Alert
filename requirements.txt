@@ -1,0 +1,6 @@
+python-telegram-bot
+requests
+beautifulsoup4==4.9.3
+lxml
+psycopg2-binary
+python-dotenv
