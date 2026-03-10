@@ -7,12 +7,12 @@ Scraper for Agence Dupleix real estate agency.
 import re
 import urllib.parse
 from traceback import print_exc
-from urllib.request import Request, urlopen
 
 import psycopg2.extensions
-from bs4 import BeautifulSoup
 
 from utils.constants import NOTIFICATION_CONTENT
+from utils.db import is_notified, mark_notified
+from utils.http import fetch
 from utils.notify import send_notification
 from utils.utils import log, check_price_in_range
 
@@ -30,60 +30,74 @@ async def notify_dupleix_results(conn: psycopg2.extensions.connection) -> None:
     try:
         log('Start scraping agency...', PROVIDER)
 
-        req = Request(url=URL, headers={'User-Agent': 'Mozilla/5.0'})
-        response = urlopen(req).read()
-        soup = BeautifulSoup(response.decode('latin-1'), 'lxml')
-
+        # FRAGILE: this site uses latin-1 encoding — do NOT change to utf-8
+        # FRAGILE: listing cards are <div class="single-featured-property mb-50">
+        soup = fetch(URL, encoding='latin-1')
         all_houses = soup.find_all('div', {'class': 'single-featured-property mb-50'})
         log(f'{len(all_houses)} house(s) found', PROVIDER)
 
         db_cursor = conn.cursor()
 
         for house in all_houses:
-            url = house.find('a', {'class': 'btn south-btn'}).get('href').strip()
+            # FRAGILE: link is in <a class="btn south-btn">
+            link_tag = house.find('a', {'class': 'btn south-btn'})
+            if link_tag is None:
+                log('Could not find listing link — skipping', PROVIDER)
+                continue
+
+            url = link_tag.get('href').strip()
             item_id = url.rsplit('/')[-1].rsplit('_')[-1].rsplit('.')[0]
             url = PREFIX_URL + url
 
-            size = house.find('div', class_='space').find('span').text.strip()
-            size = re.findall(r'\d+', size)[0] + 'm2'
+            # FRAGILE: size is on the listing card in <div class="space"> > <span>
+            space_div = house.find('div', class_='space')
+            if space_div is None:
+                log(f'Could not find size for {item_id} — skipping', PROVIDER)
+                continue
+            size_span = space_div.find('span')
+            if size_span is None:
+                log(f'Could not find size span for {item_id} — skipping', PROVIDER)
+                continue
+            size = re.findall(r'\d+', size_span.text.strip())[0] + 'm2'
 
             log(f'Check if {item_id} deal already notified', PROVIDER)
-            db_cursor.execute(
-                'SELECT COUNT(*) FROM public.alert WHERE unique_id = %(id)s AND provider = %(provider)s',
-                {'id': item_id, 'provider': PROVIDER},
-            )
-            count = db_cursor.fetchone()[0]
-
-            if count == 0:
-                house_details_content = urlopen(Request(url=url, headers={'User-Agent': 'Mozilla/5.0'})).read()
-                house_details = BeautifulSoup(house_details_content.decode('latin-1'), 'lxml')
-
-                price = house_details.find('div', {'class': 'list-price'}).text.strip()
-                price = re.findall(r'\d+', price)[0] + '€'
-                address = house_details.find('h1').text.split('-')[-1].strip() + ' Paris'
-                images_div = house_details.find_all('a', {'data-fancybox': 'gallery'})
-                images = [(PREFIX_URL + img.get('href').strip()) for img in images_div]
-
-                if check_price_in_range(price, size):
-                    log(f"New listing: {PROVIDER} - {address} - {size} - {price} => {url}", domain=PROVIDER)
-                    content = NOTIFICATION_CONTENT.format(
-                        provider=PROVIDER,
-                        price=price,
-                        address=address,
-                        addressLink=urllib.parse.quote(address, safe='/'),
-                        size=size,
-                        url=url,
-                    )
-                    await send_notification(content, images)
-                    db_cursor.execute(
-                        'INSERT INTO public.alert (unique_id, provider, creation_date) VALUES (%(id)s, %(provider)s, CURRENT_TIMESTAMP)',
-                        {'id': item_id, 'provider': PROVIDER},
-                    )
-                    conn.commit()
-                else:
-                    log(f"Not in price/size range. Size: {size}; Price: {price}")
-            else:
+            if is_notified(db_cursor, item_id, PROVIDER):
                 log('Already notified', PROVIDER)
+                continue
+
+            # FRAGILE: detail page also uses latin-1
+            # FRAGILE: price in <div class="list-price">; address from <h1> text after last '-'
+            # FRAGILE: images from <a data-fancybox="gallery"> href attributes
+            house_details = fetch(url, encoding='latin-1')
+
+            price_div = house_details.find('div', {'class': 'list-price'})
+            h1_tag = house_details.find('h1')
+
+            if not all([price_div, h1_tag]):
+                log(f'Missing detail fields on {url} — skipping', PROVIDER)
+                continue
+
+            price = re.findall(r'\d+', price_div.text.strip())[0] + '€'
+            address = h1_tag.text.split('-')[-1].strip() + ' Paris'
+            images = [
+                PREFIX_URL + a.get('href').strip()
+                for a in house_details.find_all('a', {'data-fancybox': 'gallery'})
+            ]
+
+            if check_price_in_range(price, size):
+                log(f"New listing: {PROVIDER} - {address} - {size} - {price} => {url}", domain=PROVIDER)
+                content = NOTIFICATION_CONTENT.format(
+                    provider=PROVIDER,
+                    price=price,
+                    address=address,
+                    addressLink=urllib.parse.quote(address, safe='/'),
+                    size=size,
+                    url=url,
+                )
+                await send_notification(content, images)
+                mark_notified(db_cursor, conn, item_id, PROVIDER)
+            else:
+                log(f"Not in price/size range. Size: {size}; Price: {price}")
 
         log('Closing db cursor...', PROVIDER)
         db_cursor.close()

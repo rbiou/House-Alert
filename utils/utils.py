@@ -5,7 +5,7 @@ Shared utilities: logging helper, price/size filter criteria, and validation log
 """
 
 import re
-from time import time
+from datetime import datetime
 
 # Rental criteria: (minimum size in m², maximum price in €)
 # A listing is a match if it fits any of these brackets.
@@ -19,11 +19,8 @@ TARGET_HOUSES = [
 
 
 def log(message: str = "Log", domain: str = "app") -> None:
-    print("\033[90m{timestamp}\033[0m｜[House-Alert] [{domain}] {message}".format(
-        timestamp=int(time()),
-        domain=domain,
-        message=message,
-    ))
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(f"\033[90m{timestamp}\033[0m｜[House-Alert] [{domain}] {message}")
 
 
 def check_price_in_range(price: float | str, size: float | str) -> bool:

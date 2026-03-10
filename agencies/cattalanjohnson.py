@@ -7,12 +7,12 @@ Scraper for Cattalan Johnson real estate agency.
 import re
 import urllib.parse
 from traceback import print_exc
-from urllib.request import Request, urlopen
 
 import psycopg2.extensions
-from bs4 import BeautifulSoup
 
 from utils.constants import NOTIFICATION_CONTENT
+from utils.db import is_notified, mark_notified
+from utils.http import fetch
 from utils.notify import send_notification
 from utils.utils import log, check_price_in_range
 
@@ -29,63 +29,80 @@ async def notify_cattalanjohnson_results(conn: psycopg2.extensions.connection) -
     try:
         log('Start scraping agency...', PROVIDER)
 
-        req = Request(url=URL, headers={'User-Agent': 'Mozilla/5.0'})
-        response = urlopen(req).read()
-        soup = BeautifulSoup(response.decode('utf-8'), 'lxml')
-
+        # FRAGILE: listing cards are <div class="row liste-biens">
+        soup = fetch(URL)
         all_houses = soup.find_all('div', {'class': 'row liste-biens'})
         log(f'{len(all_houses)} house(s) found', PROVIDER)
 
         db_cursor = conn.cursor()
 
         for house in all_houses:
-            url = house.find('div', {'class': 'crop'}).find('a').get('href').strip()
+            # FRAGILE: link is inside <div class="crop"> > <a>
+            crop_div = house.find('div', {'class': 'crop'})
+            if crop_div is None:
+                log('Could not find crop div — skipping', PROVIDER)
+                continue
+            link_tag = crop_div.find('a')
+            if link_tag is None:
+                log('Could not find listing link — skipping', PROVIDER)
+                continue
+
+            url = link_tag.get('href').strip()
             item_id = url.rsplit('/')[-2]
             url = 'https://www.cattalanjohnson.com' + url
 
             log(f'Check if {item_id} deal already notified', PROVIDER)
-            db_cursor.execute(
-                'SELECT COUNT(*) FROM public.alert WHERE unique_id = %(id)s AND provider = %(provider)s',
-                {'id': item_id, 'provider': PROVIDER},
-            )
-            count = db_cursor.fetchone()[0]
-
-            if count == 0:
-                house_details_content = urlopen(Request(url=url, headers={'User-Agent': 'Mozilla/5.0'})).read()
-                house_details = BeautifulSoup(house_details_content.decode('utf-8'), 'lxml')
-
-                price = house.find('p', {'class': 'prix'}).text.strip()
-                price = ''.join(re.findall(r'\d+', price)) + '€'
-                size = house_details.find('div', {'id': 'content_divSurface', 'class': 'col-md-3'}).text.strip()
-                size = re.findall(r'\d+', size)[0] + 'm2'
-                postal_code = re.search(
-                    r'map_(\d+)\.png',
-                    house.find('img', {'class': 'img-responsive'}).get('style').strip(),
-                ).group(1)
-                address = 'Paris ' + postal_code
-                images_div = house_details.find('div', {'class': 'container-miniature no-print'}).find_all('img')
-                images = [('https://www.cattalanjohnson.com' + img.get('src').strip()) for img in images_div]
-
-                if check_price_in_range(price, size):
-                    log(f"New listing: {PROVIDER} - {address} - {size} - {price} => {url}", domain=PROVIDER)
-                    content = NOTIFICATION_CONTENT.format(
-                        provider=PROVIDER,
-                        price=price,
-                        address=address,
-                        addressLink=urllib.parse.quote(address, safe='/'),
-                        size=size,
-                        url=url,
-                    )
-                    await send_notification(content, images)
-                    db_cursor.execute(
-                        'INSERT INTO public.alert (unique_id, provider, creation_date) VALUES (%(id)s, %(provider)s, CURRENT_TIMESTAMP)',
-                        {'id': item_id, 'provider': PROVIDER},
-                    )
-                    conn.commit()
-                else:
-                    log(f"Not in price/size range. Size: {size}; Price: {price}")
-            else:
+            if is_notified(db_cursor, item_id, PROVIDER):
                 log('Already notified', PROVIDER)
+                continue
+
+            # Price is on the listing card itself (no detail page needed)
+            # FRAGILE: price in <p class="prix">
+            price_tag = house.find('p', {'class': 'prix'})
+            if price_tag is None:
+                log(f'Could not find price on {url} — skipping', PROVIDER)
+                continue
+            price = ''.join(re.findall(r'\d+', price_tag.text.strip())) + '€'
+
+            # FRAGILE: surface in <div id="content_divSurface" class="col-md-3">
+            # FRAGILE: postal code extracted from style attribute of <img class="img-responsive">
+            house_details = fetch(url)
+
+            surface_div = house_details.find('div', {'id': 'content_divSurface', 'class': 'col-md-3'})
+            img_tag = house.find('img', {'class': 'img-responsive'})
+
+            if surface_div is None or img_tag is None:
+                log(f'Missing detail fields on {url} — skipping', PROVIDER)
+                continue
+
+            size = re.findall(r'\d+', surface_div.text.strip())[0] + 'm2'
+            postal_code_match = re.search(r'map_(\d+)\.png', img_tag.get('style', '').strip())
+            if postal_code_match is None:
+                log(f'Could not extract postal code on {url} — skipping', PROVIDER)
+                continue
+            address = 'Paris ' + postal_code_match.group(1)
+
+            # FRAGILE: images in <div class="container-miniature no-print"> > <img>
+            miniature_div = house_details.find('div', {'class': 'container-miniature no-print'})
+            images = [
+                'https://www.cattalanjohnson.com' + img.get('src').strip()
+                for img in (miniature_div.find_all('img') if miniature_div else [])
+            ]
+
+            if check_price_in_range(price, size):
+                log(f"New listing: {PROVIDER} - {address} - {size} - {price} => {url}", domain=PROVIDER)
+                content = NOTIFICATION_CONTENT.format(
+                    provider=PROVIDER,
+                    price=price,
+                    address=address,
+                    addressLink=urllib.parse.quote(address, safe='/'),
+                    size=size,
+                    url=url,
+                )
+                await send_notification(content, images)
+                mark_notified(db_cursor, conn, item_id, PROVIDER)
+            else:
+                log(f"Not in price/size range. Size: {size}; Price: {price}")
 
         log('Closing db cursor...', PROVIDER)
         db_cursor.close()
