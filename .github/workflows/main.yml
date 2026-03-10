@@ -2,7 +2,7 @@ name: Run House-Alert
 
 on:
   schedule:
-    - cron: '*/1 * * * *'  # Every minute
+    - cron: '*/10 * * * *'  # Every 10 minutes
 
 jobs:
   run:
