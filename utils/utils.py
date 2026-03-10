@@ -4,6 +4,8 @@ utils.py
 Shared utilities: logging helper, price/size filter criteria, and validation logic.
 """
 
+from __future__ import annotations
+
 import re
 from datetime import datetime
 
