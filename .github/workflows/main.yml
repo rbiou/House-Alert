@@ -3,6 +3,7 @@ name: Run House-Alert
 on:
   schedule:
     - cron: '*/10 * * * *'  # Every 10 minutes
+  workflow_dispatch:  # Allows manual trigger from the GitHub Actions UI
 
 jobs:
   run:
